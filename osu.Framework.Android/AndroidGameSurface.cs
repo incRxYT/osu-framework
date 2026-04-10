@@ -1,16 +1,19 @@
-﻿// Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
+// Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
 // See the LICENCE file in the repository root for full licence text.
+//
+// High refresh rate (90fps) modifications by incRX
+// osu-framework fork: https://github.com/incRxYT/osu-framework
 
 using System;
 using Android.Content;
 using Android.Runtime;
-using Org.Libsdl.App;
-using osu.Framework.Graphics;
-using osu.Framework.Platform;
-using osu.Framework.Bindables;
 using Android.Views;
 using AndroidX.Core.View;
 using AndroidX.Window.Layout;
+using osu.Framework.Bindables;
+using osu.Framework.Graphics;
+using osu.Framework.Platform;
+using Org.Libsdl.App;
 
 namespace osu.Framework.Android
 {
@@ -56,6 +59,22 @@ namespace osu.Framework.Android
         {
             base.HandleResume();
             isSurfaceReady = true;
+
+            // Request high refresh rate from the display compositor.
+            // SetFrameRate() is the correct API for SurfaceView-based rendering (which SDL uses).
+            // - FRAME_RATE_COMPATIBILITY_FIXED: tells the OS this is a game that wants exactly this rate,
+            //   not a media player that can tolerate frame drops.
+            // - CHANGE_FRAME_RATE_ONLY_IF_SEAMLESS: avoids a jarring black-flash mode switch;
+            //   falls back gracefully if 90hz isn't available without disrupting the display.
+            // Requires API 30 (Android 11). Devices below this will stay at their default refresh rate.
+            if (OperatingSystem.IsAndroidVersionAtLeast(30))
+            {
+                Holder?.Surface?.SetFrameRate(
+                    90f,
+                    (int)SurfaceFrameRateCompatibility.Fixed,
+                    (int)ChangeFrameRateStrategy.OnlyIfSeamless
+                );
+            }
         }
 
         public override WindowInsets? OnApplyWindowInsets(View? view, WindowInsets? insets)
